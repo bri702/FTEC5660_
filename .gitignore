@@ -1,0 +1,11 @@
+.venv/
+.idea/
+__pycache__/
+runs/*
+!runs/verified-26-three-variants/
+runs/verified-26-three-variants/mcp_*.log
+runs/verified-26-three-variants/*.zip
+/local-results/
+.DS_Store
+.env
+.env.*
