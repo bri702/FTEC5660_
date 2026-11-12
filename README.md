@@ -1,20 +1,20 @@
-# 第 27 项 Codified Context · MCP 检索复现
+# Reproducing MCP Retrieval in Codified Context
 
-本项目复现 Codified Context 的本地上下文检索。MCP 服务读取一条游戏开发任务，按关键词给代码库的子系统打分，再返回相关模块和建议查看的文件路径。实验比较三种关键词匹配规则在同一批 26 道评估题上的表现。 [论文 §3.3.1](https://arxiv.org/html/2602.20478v1#S3.SS3.SSS1) · [作者的工具说明](https://github.com/arisvas4/codified-context-infrastructure/tree/6b0408fe86d8e802bcbd00cd6d2d057f288f518a/mcp-server)
+Project 27 reproduces local context retrieval in Codified Context. The Model Context Protocol (MCP) server reads a game development task, scores codebase subsystems by keyword matches, and recommends relevant subsystems and file paths. The experiment compares three matching rules on the same 26 evaluation cases. [Paper §3.3.1](https://arxiv.org/html/2602.20478v1#S3.SS3.SSS1) · [Author's MCP documentation](https://github.com/arisvas4/codified-context-infrastructure/tree/6b0408fe86d8e802bcbd00cd6d2d057f288f518a/mcp-server)
 
-作者将项目知识分为项目规则、领域专家智能体和按需查阅的文档三层。本实验复现第三层的 `find_relevant_context` 工具。 [论文三层架构](https://arxiv.org/html/2602.20478v1#S3)
+Codified Context organizes project knowledge into three layers: project rules, specialist agents, and documentation retrieved on demand. This reproduction focuses on the third layer's `find_relevant_context` tool. [Three-layer architecture](https://arxiv.org/html/2602.20478v1#S3)
 
-## 三步实验
+## Experimental Variants
 
-三版使用同一份 [cases.json](cases.json)。其中有 26 道自编评估题和一条作者文档里的示例。每道评估题标注一个预期优先查看的子系统。三版共用子系统索引、计分权重、排序和文件推荐规则，依次运行同样的查询。
+All three variants use the same queries in the same order. The case file contains 26 custom evaluation cases and one example from the author's documentation. Each evaluation case has a label identifying the subsystem to investigate first. The variants share the subsystem index, scoring weights, ranking rules, and file recommendation rules. [Case file](cases.json)
 
-1. **作者原版（子串匹配）。** 以作者 v1.0.0 的 MCP 服务为基线。原版检查关键词是否出现在任务描述里，例如 `screenshot` 会触发瞄准模块的 `screen`。用 `fix camera offset` 核对作者示例，原版将 `rendering` 排在第一位，建议路径包含 `coordinate-systems.md`。作者示例单独记录，汇总指标只计 26 道评估题。 [作者示例](https://github.com/arisvas4/codified-context-infrastructure/blob/v1.0.0/mcp-server/README.md#key-data-structures)
-2. **严格整词。** 把关键词命中改为词边界匹配，排除 `screenshot` 中的 `screen`。这一步也漏掉了正常复数。输入 `Sprites and textures flicker.` 时，严格整词版返回空列表。 [第一步补丁](runs/verified-26-three-variants/01_original_to_word_boundary.diff)
-3. **整词加常规复数。** 先检查完整关键词，未命中时再尝试关键词最后一个词的常规复数。于是 `sprites` 和 `textures` 可以命中 `sprite` 和 `texture`，`text` 仍无法命中 `textures`。该题的渲染模块回到第一位。 [第二步补丁](runs/verified-26-three-variants/02_word_boundary_to_plural.diff)
+1. **Original substring matching.** The baseline uses version 1.0.0 of the author's MCP server. A keyword can match within another word, as when `screen` inside `screenshot` scores a point for `aiming`. For the documented query `fix camera offset`, the baseline ranks `rendering` first and includes `coordinate-systems.md` among the suggested paths. The results record this example separately and calculate the aggregate metrics on the 26 evaluation cases. [Author's example](https://github.com/arisvas4/codified-context-infrastructure/blob/v1.0.0/mcp-server/README.md#key-data-structures)
+2. **Strict whole-word matching.** The first change requires word boundaries around a keyword, which removes the match for `screen` inside `screenshot`. It also misses regular plurals. The query `Sprites and textures flicker.` returns an empty list. [First patch](runs/verified-26-three-variants/01_original_to_word_boundary.diff)
+3. **Whole-word matching with regular plurals.** The second change checks the full keyword first. If there is no match, it tries the regular plural of the keyword's final word. This lets `sprites` and `textures` match `sprite` and `texture`, respectively. The word boundary still excludes `text` inside `textures`, and `rendering` ranks first again. [Second patch](runs/verified-26-three-variants/02_word_boundary_to_plural.diff)
 
-## 安装和复跑
+## Setup and Reproduction
 
-需要 Python 3.12 和 Git。在 PyCharm 的 **Terminal** 或系统终端执行以下命令。
+You need Python 3.12 and Git. Run these commands in a system terminal or in PyCharm's **Terminal**.
 
 ```bash
 git clone https://github.com/bri702/FTEC5660_.git
@@ -24,54 +24,52 @@ python3.12 -m venv .venv
 ./.venv/bin/python -B runs/verified-26-three-variants/run_three_variants.py --project . --out local-results/three-variant-26
 ```
 
-已装好依赖时，从项目根目录执行最后一行即可。新结果写入 `local-results/three-variant-26/`，每次复跑请给 `--out` 指定一个尚不存在的目录。脚本自动生成临时改版，依次启动三套本地 MCP 服务。装好依赖后可离线运行，无需模型或 API Key。 [复跑脚本](runs/verified-26-three-variants/run_three_variants.py)
+Once the dependencies are installed, run the last command from the repository root. It writes results to `local-results/three-variant-26/`. For each rerun, set `--out` to a directory that does not already exist. The script creates temporary versions of the modified server and runs all three MCP servers locally in sequence. After installation, the experiment runs offline without a model or an API key. [Reproduction script](runs/verified-26-three-variants/run_three_variants.py)
 
-## 26 题实测结果
+## Results on 26 Evaluation Cases
 
-| 版本 | Top-1 命中 | Top-3 命中 | 前三名未标注候选总数 |
+| Variant | Top-1 hits | Top-3 hits | Unlabeled candidates in the top three |
 | --- | ---: | ---: | ---: |
-| 作者原版 | 21/26（80.8%） | 25/26（96.2%） | 42 |
-| 严格整词 | 18/26（69.2%） | 21/26（80.8%） | 20 |
-| 整词加常规复数 | 23/26（88.5%） | 26/26（100%） | 23 |
+| Original substring matching | 21/26 (80.8%) | 25/26 (96.2%) | 42 |
+| Strict whole-word matching | 18/26 (69.2%) | 21/26 (80.8%) | 20 |
+| Whole-word matching with regular plurals | 23/26 (88.5%) | 26/26 (100%) | 23 |
 
-Top-1 和 Top-3 分别统计预期子系统排第一、进入前三的题数。未标注候选总数是逐题累加前三名中未列入该题人工标签的候选。
+Top-1 hits count cases where the labeled subsystem ranks first. Top-3 hits count cases where it appears among the first three results. The final column adds up the top-three candidates that differ from the label for each case.
 
-加入常规复数后，相比严格整词，两项命中各增加 5 道。相比作者原版，第一名命中多 2 道，前三名命中多 1 道，未标注候选总数从 42 降到 23。
+Adding regular plurals recovered five hits at each cutoff compared with strict whole-word matching. Compared with the original version, the final variant gained two Top-1 hits and one Top-3 hit. The number of unlabeled candidates in the top three fell from 42 to 23.
 
-- 手柄重连题中，原版把 `fails` 里的 `ai` 计给 AI 模块。改进版排除这次命中，`input` 从第二升到第一。
-- 读档后音乐播放两次时，原版从 `saved` 和 `loading` 命中 `save` 和 `load`。改进版将 `audio` 从第三升到第一。
-- 血条颜色错误时，排除 `health` 里的 `heal` 让 `ui` 从第四升到第三。`health` 仍是战斗和伤害模块的完整关键词。
-- 步枪按一次扳机却发射两枚弹丸时，改进版仍将瞄准排第一、战斗排第二。`fire` 和 `projectile` 在瞄准模块的索引中都是完整关键词。
+- **Gamepad reconnect.** The original version scores `ai` inside `fails` for the AI subsystem. The final version removes that match, moving `input` from second to first.
+- **Music plays twice after loading a save.** The original version matches `save` inside `saved` and `load` inside `loading`. The final version moves `audio` from third to first.
+- **Incorrect health bar color.** Excluding `heal` inside `health` moves `ui` from fourth to third. Both the combat and damage subsystems still match the full keyword `health`.
+- **A rifle fires two projectiles per trigger press.** The final version still ranks `aiming` first and `combat` second. The `aiming` index contains both `fire` and `projectile` as full keywords.
 
-## 结果文件
+## Result Files
 
-仓库的 `runs/` 只保留一份三版本实测记录。原版与最终版的对照可直接查看下表所链接 CSV 中的 `original` 和 `whole_word_plural` 两组记录。
+The `runs/` directory contains one set of verified results for all three variants. To compare the original and final versions, use the `original` and `whole_word_plural` rows in the CSV files.
 
-| 文件 | 内容 |
+| File | Contents |
 | --- | --- |
-| [metrics.csv](runs/verified-26-three-variants/metrics.csv) | 三个版本的汇总指标，每版一行 |
-| [case_results.csv](runs/verified-26-three-variants/case_results.csv) | 81 行逐题结果，每版有 26 道评估题和一条作者示例 |
-| [raw_mcp.json](runs/verified-26-three-variants/raw_mcp.json) | MCP 原始响应，包括子系统排名、命中关键词和建议文件 |
-| [01_original_to_word_boundary.diff](runs/verified-26-three-variants/01_original_to_word_boundary.diff) | 从原版到严格整词 |
-| [02_word_boundary_to_plural.diff](runs/verified-26-three-variants/02_word_boundary_to_plural.diff) | 从严格整词到整词加常规复数 |
-| [whole_word_plural.diff](runs/verified-26-three-variants/whole_word_plural.diff) | 从原版到最终改版的直接差异，对应报告中的原版与改版对照 |
+| [metrics.csv](runs/verified-26-three-variants/metrics.csv) | Aggregate metrics, one row per variant |
+| [case_results.csv](runs/verified-26-three-variants/case_results.csv) | 81 data rows, with 26 evaluation cases and one documented example per variant |
+| [raw_mcp.json](runs/verified-26-three-variants/raw_mcp.json) | Raw MCP responses, including subsystem rankings, matched keywords, and recommended files |
+| [01_original_to_word_boundary.diff](runs/verified-26-three-variants/01_original_to_word_boundary.diff) | Changes from the original to strict whole-word matching |
+| [02_word_boundary_to_plural.diff](runs/verified-26-three-variants/02_word_boundary_to_plural.diff) | Changes from strict whole-word matching to regular plural handling |
+| [whole_word_plural.diff](runs/verified-26-three-variants/whole_word_plural.diff) | Direct comparison between the original and final versions, as discussed in the report |
 
-复跑时，指定目录还会保存 `run.json` 和各版服务日志。
+A rerun also writes `run.json` and the server logs for each variant to the specified output directory.
 
-## 范围和局限
+## Scope and Limitations
 
-本实验只测量 MCP 在这 26 道任务上的检索结果。每道题只标注一个优先模块，其余候选也可能对排查有帮助。测试题包含刻意设计的词内误匹配案例，结果适用于这组题。作者的论文还研究了开发会话和案例，本实验的指标无法估计智能体的代码正确率或开发效率。 [论文评估方法与范围](https://arxiv.org/html/2602.20478v1#S4.SS1)
+The results describe MCP retrieval on this set of 26 tasks, including cases designed to expose unintended substring matches. Each task labels one priority subsystem, so other returned subsystems can still help with diagnosis. The paper also examines development sessions and case studies. This experiment measures retrieval, so its metrics do not estimate agent code correctness or development efficiency. [Paper evaluation scope](https://arxiv.org/html/2602.20478v1#S4.SS1)
 
-## 调试记录
+## Debugging Log
 
-### 从严格整词匹配到整词加复数
+The first change used strict whole-word matching to remove unintended matches within words. To isolate the effect of the matching rule, all three variants ran the same 26 evaluation cases in the same order with the same labels and scoring rules. Strict matching reduced Top-1 hits from 21/26 to 18/26 and Top-3 hits from 25/26 to 21/26.
 
-第一轮用严格整词匹配减少词内误命中。为比较规则调整的影响，三个版本按相同顺序运行同一批 26 道评估题，使用同一份标签和评分规则。相比作者原版，严格整词版的 Top-1 从 21/26 降到 18/26，Top-3 从 25/26 降到 21/26。
+The strict variant returned an empty list for `render-plurals` (`Sprites and textures flicker.`). The indexed keywords are `sprite` and `texture`. Because each plural ends in `s`, there is no word boundary after the indexed singular form in the query.
 
-逐题检查发现，`render-plurals`（`Sprites and textures flicker.`）在严格整词版中返回空列表。题目用了 `sprites` 和 `textures`，而索引中的关键词是 `sprite` 和 `texture`。复数的 `s` 紧接在关键词后面，严格整词在这个位置找不到词边界，因此漏掉了两处匹配。
+The second change kept word boundaries and added regular plural handling for the final word of a keyword. This restored `rendering` to first place for that query and still excluded `text` inside `textures`. On the same 26 cases, Top-1 hits rose to 23/26 and Top-3 hits rose to 26/26, five more hits at each cutoff than strict matching. The count of unlabeled candidates in the top three rose from 20 to 23, compared with 42 for the original version. [Per-case results](runs/verified-26-three-variants/case_results.csv) · [Aggregate metrics](runs/verified-26-three-variants/metrics.csv)
 
-第二轮保留词边界，并在完整关键词未命中时尝试关键词最后一个词的常规复数。该题的 `rendering` 回到第一名，`textures` 中的 `text` 仍被排除。复跑同一批题后，Top-1 升至 23/26，Top-3 升至 26/26，均比严格整词版多命中 5 道。前三名未标注候选总数从 20 增至 23，仍低于作者原版的 42。 [逐题结果](runs/verified-26-three-variants/case_results.csv) · [三版本汇总](runs/verified-26-three-variants/metrics.csv)
+## Source and License
 
-## 源码与许可
-
-`upstream/server.py` 保留作者 v1.0.0 的源码，固定于提交 `6b0408fe86d8e802bcbd00cd6d2d057f288f518a`。上游代码采用 MIT 许可证，许可文件随源码提供。 [固定版本的作者源码](https://github.com/arisvas4/codified-context-infrastructure/tree/6b0408fe86d8e802bcbd00cd6d2d057f288f518a) · [MIT 许可证](https://github.com/arisvas4/codified-context-infrastructure/blob/6b0408fe86d8e802bcbd00cd6d2d057f288f518a/LICENSE)
+`upstream/server.py` contains the author's version 1.0.0 source at commit `6b0408fe86d8e802bcbd00cd6d2d057f288f518a`. The upstream code is under the MIT license, included with the source. [Pinned upstream source](https://github.com/arisvas4/codified-context-infrastructure/tree/6b0408fe86d8e802bcbd00cd6d2d057f288f518a) · [MIT license](https://github.com/arisvas4/codified-context-infrastructure/blob/6b0408fe86d8e802bcbd00cd6d2d057f288f518a/LICENSE)
