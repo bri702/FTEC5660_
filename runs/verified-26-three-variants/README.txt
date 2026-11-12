@@ -1,12 +1,17 @@
-项目 27 同题三版本复跑
+Project 27 Reproduction Results for Three Matching Variants
 
-每版运行 26 道评估题和一条作者示例。汇总指标只统计 26 道评估题。
-metrics.csv 是汇总表，case_results.csv 是 81 行逐题记录，raw_mcp.json 是 MCP 原始响应。
-三版使用仓库根目录的 cases.json。
+Each variant runs the same 26 evaluation cases and one documented example.
+The aggregate metrics cover the 26 evaluation cases. All three variants use
+cases.json from the repository root.
 
-两次修改按顺序记录在 01_original_to_word_boundary.diff 和 02_word_boundary_to_plural.diff 中。
-第一步改为严格整词匹配。第二步保留词边界，并在关键词未命中时尝试常规复数。
+metrics.csv contains the aggregate metrics. case_results.csv contains 81 data
+rows across the three variants. raw_mcp.json contains the original MCP responses.
 
-如需复跑，在原项目仓库根目录安装依赖，然后执行：
+The patches record the two changes in order. 01_original_to_word_boundary.diff
+introduces strict whole-word matching. 02_word_boundary_to_plural.diff keeps the
+word boundaries and tries a regular plural when the exact keyword has no match.
+
+To reproduce the experiment, install the dependencies and run this command
+from the repository root.
 
     ./.venv/bin/python -B runs/verified-26-three-variants/run_three_variants.py --project . --out local-results/three-variant-26
