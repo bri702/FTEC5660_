@@ -1,4 +1,4 @@
-# Reproducing MCP Retrieval in Codified Context
+# Project No.27 Reproducing MCP Retrieval in Codified Context
 
 Project 27 reproduces local context retrieval in Codified Context. The Model Context Protocol (MCP) server reads a game development task, scores codebase subsystems by keyword matches, and recommends relevant subsystems and file paths. The experiment compares three matching rules on the same 26 evaluation cases. [Paper §3.3.1](https://arxiv.org/html/2602.20478v1#S3.SS3.SSS1) · [Author's MCP documentation](https://github.com/arisvas4/codified-context-infrastructure/tree/6b0408fe86d8e802bcbd00cd6d2d057f288f518a/mcp-server)
 
