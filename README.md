@@ -17,8 +17,8 @@ All three variants use the same queries in the same order. The case file contain
 You need Python 3.12 and Git. Run these commands in a system terminal or in PyCharm's **Terminal**.
 
 ```bash
-git clone https://github.com/bri702/FTEC5660_.git
-cd FTEC5660_
+git clone https://github.com/bri702/FTEC5660_Reproducibility_Project-27.git
+cd FTEC5660_Reproducibility_Project-27
 python3.12 -m venv .venv
 ./.venv/bin/python -m pip install -r requirements.txt
 ./.venv/bin/python -B runs/verified-26-three-variants/run_three_variants.py --project . --out local-results/three-variant-26
